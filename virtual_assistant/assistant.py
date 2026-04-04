@@ -1,64 +1,79 @@
-from intents import detect_intent
-from utils import current_time_str, current_date_str, clean_query_text
-from web_search import get_web_summary
+from system_control import *
+from file_system import *
+from web_search import *
+from utils import *
+from llm import *
+from rapidfuzz import fuzz
+import re
+
+def fuzzy(text, options):
+    return any(fuzz.partial_ratio(text, opt) > 70 for opt in options)
 
 
 class Assistant:
-    def __init__(self):
-        self.last_response = ""
-        self.last_user_text = ""
+    def handle(self, text):
+        text = text.lower()
 
-    def handle(self, text: str):
-        self.last_user_text = text or ""
-        intent = detect_intent(text)
+        if fuzzy(text, ["exit", "quit"]):
+            return "Goodbye", True
 
-        if intent == "exit":
-            response = "Goodbye."
-            self.last_response = response
-            return response, True
+        if fuzzy(text, ["time"]):
+            return current_time_str(), False
 
-        if intent == "time":
-            response = f"It is {current_time_str()}."
-            self.last_response = response
-            return response, False
+        if fuzzy(text, ["date", "today"]):
+            return current_date_str(), False
 
-        if intent == "date":
-            response = f"Today is {current_date_str()}."
-            self.last_response = response
-            return response, False
+        # safer logic
 
-        if intent == "greeting":
-            response = "Hello. How can I help?"
-            self.last_response = response
-            return response, False
+        import re
 
-        if intent == "how_are_you":
-            response = "I'm doing fine. Ready when you are."
-            self.last_response = response
-            return response, False
+        if "volume" in text or "sound" in text:
+            # 🔥 set volume
+            num = re.search(r'\d+', text)
+            if num:
+                return set_volume(num.group()), False
 
-        if intent == "thanks":
-            response = "You're welcome."
-            self.last_response = response
-            return response, False
+            # decrease
+            if any(w in text for w in ["down", "decrease", "lower"]):
+                return decrease_volume(), False
 
-        if intent == "help":
-            response = (
-                "You can ask me about the time, date, definitions, "
-                "or tell me to search the web for a topic."
-            )
-            self.last_response = response
-            return response, False
+            # increase
+            if any(w in text for w in ["up", "increase", "raise"]):
+                return increase_volume(), False
 
-        if intent == "web_summary":
+            # mute
+            if "mute" in text:
+                return mute_volume(), False
+            
+        if "brightness" in text:
+            import re
+            num = re.search(r'\d+', text)
+            if num:
+                return set_brightness(num.group()), False
+
+        if fuzzy(text, ["open", "launch"]):
+            return open_app(text.replace("open", "").strip()), False
+
+        if fuzzy(text, ["list files", "show files"]):
+            return list_files(), False
+
+        if "file details" in text:
+            return file_details(text.split()[-1]), False
+
+        if "open file" in text:
+            return open_file(text.split()[-1]), False
+
+        if fuzzy(text, ["what", "who", "search", "tell"]):
             query = clean_query_text(text)
-            response = get_web_summary(query)
-            self.last_response = response
-            return response, False
+            result = get_web_summary(query)
 
-        response = (
-            "I can help with time, date, and short web summaries. "
-            "Try asking what something is, or say search web for a topic."
-        )
-        self.last_response = response
-        return response, False
+            if result == "No result found":
+                return ask_llm(query), False
+
+            return result, False
+
+        # fallback → LLM
+        if len(text.split()) > 2:
+            return ask_llm(text), False
+
+        return "I didn't understand that.", False

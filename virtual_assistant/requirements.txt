@@ -1,0 +1,7 @@
+sounddevice
+vosk
+pyttsx3
+requests
+wikipedia
+beautifulsoup4
+rapidfuzz
