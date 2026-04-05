@@ -1,7 +1,9 @@
-sounddevice
-vosk
-pyttsx3
-requests
-wikipedia
-beautifulsoup4
-rapidfuzz
+sounddevice #playing and recording audio signals stored as numpy arrays
+faster_whisper #speech to text
+requests #for sending http requests and web scraping
+pyttsx3 #text to speech
+numpy #required for scipy
+scipy #for wav files
+wikipedia #for wikipedia
+rapidfuzz #string matching
+tkinter #gui
